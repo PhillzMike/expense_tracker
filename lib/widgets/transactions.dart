@@ -4,16 +4,18 @@ import 'package:intl/intl.dart';
 
 class Transactions extends StatelessWidget {
   final List<Transaction> transactions;
+  final Function(String) _deleteTransactionHandler;
 
-  const Transactions({
-    Key key,
+  const Transactions(
     this.transactions,
+    this._deleteTransactionHandler, {
+    Key key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 300,
+      height: 600,
       child: transactions.isEmpty
           ? Column(
               children: [
@@ -35,40 +37,33 @@ class Transactions extends StatelessWidget {
               itemBuilder: (context, index) {
                 var transaction = transactions[index];
                 return Card(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 20),
-                        decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Theme.of(context).primaryColor,
-                                width: 2)),
-                        child: Text(
-                          '\$${transaction.amount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
+                  elevation: 5,
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 5,
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      radius: 30,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child:
+                            FittedBox(child: Text('\$${transaction.amount}')),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(transaction.title,
-                              style: Theme.of(context).textTheme.headline6),
-                          Text(
-                            DateFormat.yMMMd().format(transaction.date),
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      )
-                    ],
+                    ),
+                    title: Text(
+                      transaction.title,
+                      style: Theme.of(context).textTheme.headline6,
+                    ),
+                    subtitle: Text(
+                      DateFormat.yMMMd().format(transaction.date),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      color: Theme.of(context).errorColor,
+                      onPressed: () =>
+                          _deleteTransactionHandler(transaction.id),
+                    ),
                   ),
                 );
               },
