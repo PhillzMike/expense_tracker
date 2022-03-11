@@ -5,7 +5,6 @@ import 'package:expense_tracker/widgets/new_transaction.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'models/transaction.dart';
 import 'widgets/transactions.dart';
@@ -61,21 +60,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final List<Transaction> _transactions = [
-    // Transaction(
-    //   id: 't1',
-    //   title: 'Shoes',
-    //   amount: 69.99,
-    //   date: DateTime.now(),
-    // ),
-    // Transaction(
-    //   id: 't2',
-    //   title: 'Groceries',
-    //   amount: 49.99,
-    //   date: DateTime.now(),
-    // ),
-  ];
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
+  final List<Transaction> _transactions = [];
 
   bool _showChart = false;
 
@@ -121,13 +107,68 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Widget getChartWidget(double scaleFactor, PreferredSizeWidget appBar) {
+  Widget _getChartWidget(MediaQueryData mediaQuery, double scaleFactor,
+      PreferredSizeWidget appBar) {
     return SizedBox(
-      height: (MediaQuery.of(context).size.height -
+      height: (mediaQuery.size.height -
               appBar.preferredSize.height -
-              MediaQuery.of(context).padding.top) *
+              mediaQuery.padding.top) *
           scaleFactor,
       child: Chart(_recentTransactions),
+    );
+  }
+
+  List<Widget> _buildLandscapeContent(
+      MediaQueryData mediaQuery, AppBar appBar, SizedBox transactionsWidget) {
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Show Chart',
+            style: Theme.of(context).textTheme.headline6,
+          ),
+          Switch.adaptive(
+              activeColor: Theme.of(context).accentColor,
+              value: _showChart,
+              onChanged: (val) => setState(() => _showChart = val))
+        ],
+      ),
+      _showChart
+          ? _getChartWidget(mediaQuery, 0.7, appBar)
+          : transactionsWidget,
+    ];
+  }
+
+  List<Widget> _buildPortraitContent(
+      MediaQueryData mediaQuery, AppBar appBar, SizedBox transactionsWidget) {
+    return [_getChartWidget(mediaQuery, 0.3, appBar), transactionsWidget];
+  }
+
+  Widget _buildCupertinoAppBar() {
+    return CupertinoNavigationBar(
+      middle: const Text('Personal Expenses'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => _startAddNewTransaction(context),
+            child: const Icon(CupertinoIcons.add),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultAppBar() {
+    return AppBar(
+      title: const Text('Personal Expenses'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _startAddNewTransaction(context),
+        ),
+      ],
     );
   }
 
@@ -136,28 +177,8 @@ class _MyHomePageState extends State<MyHomePage> {
     final mediaQuery = MediaQuery.of(context);
 
     final isPortrait = mediaQuery.orientation == Orientation.portrait;
-    final PreferredSizeWidget appBar = Platform.isIOS
-        ? CupertinoNavigationBar(
-            middle: const Text('Personal Expenses'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => _startAddNewTransaction(context),
-                  child: const Icon(CupertinoIcons.add),
-                )
-              ],
-            ),
-          )
-        : AppBar(
-            title: const Text('Personal Expenses'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => _startAddNewTransaction(context),
-              ),
-            ],
-          );
+    final PreferredSizeWidget appBar =
+        Platform.isIOS ? _buildCupertinoAppBar() : _buildDefaultAppBar();
 
     var transactionsWidget = SizedBox(
       height: (mediaQuery.size.height -
@@ -173,29 +194,14 @@ class _MyHomePageState extends State<MyHomePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!isPortrait)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Show Chart',
-                    style: Theme.of(context).textTheme.headline6,
-                  ),
-                  Switch.adaptive(
-                      activeColor: Theme.of(context).accentColor,
-                      value: _showChart,
-                      onChanged: (val) => setState(() => _showChart = val))
-                ],
-              ),
-            if (isPortrait) ...[
-              getChartWidget(0.3, appBar),
-              transactionsWidget
-            ],
-            if (!isPortrait)
-              _showChart ? getChartWidget(0.7, appBar) : transactionsWidget,
+              ..._buildLandscapeContent(mediaQuery, appBar, transactionsWidget),
+            if (isPortrait)
+              ..._buildPortraitContent(mediaQuery, appBar, transactionsWidget)
           ],
         ),
       ),
     );
+
     return Platform.isIOS
         ? CupertinoPageScaffold(
             child: pageBody,
